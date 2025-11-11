@@ -18,7 +18,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ storyboardDa
     // Add frames to the zip
     const framesFolder = zip.folder('frames');
     await Promise.all(storyboardData.frames.map(async (frameUrl, index) => {
-      const response = await fetch(frameUrl);
+      // Use a proxy to fetch the images from the local server
+      const response = await fetch(`http://localhost:3001/proxy?url=${encodeURIComponent(frameUrl)}`);
       const blob = await response.blob();
       framesFolder?.file(`frame_${index + 1}.png`, blob);
     }));
