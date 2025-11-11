@@ -1,19 +1,42 @@
 import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableItem } from './SortableItem';
 
 interface StoryboardProps {
   script: { line: string; emotion: string; intent: string }[];
   frames: string[];
-  onSceneReorder: (startIndex: number, endIndex: number) => void;
+  onSceneReorder: (oldIndex: number, newIndex: number) => void;
   onScriptChange: (newScript: { line: string; emotion: string; intent: string }[]) => void;
 }
 
 export const Storyboard: React.FC<StoryboardProps> = ({ script, frames, onSceneReorder, onScriptChange }) => {
   const [activeTab, setActiveTab] = useState('storyboard');
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    onSceneReorder(result.source.index, result.destination.index);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      onSceneReorder(Number(active.id), Number(over.id));
+    }
   };
 
   const handleScriptLineChange = (index: number, value: string) => {
@@ -75,34 +98,19 @@ export const Storyboard: React.FC<StoryboardProps> = ({ script, frames, onSceneR
             </div>
           </div>
           {/* Storyboard Grid */}
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="storyboard" direction="horizontal">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-                >
-                  {frames.map((frame, index) => (
-                    <Draggable key={index} draggableId={`frame-${index}`} index={index}>
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className="flex flex-col gap-2"
-                        >
-                          <div className="aspect-video w-full rounded-lg bg-cover bg-center" style={{ backgroundImage: `url('${frame}')` }}></div>
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Scene {Math.floor(index / 2) + 1}: Frame {index % 2 === 0 ? 'A' : 'B'}</p>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={frames.map((_, i) => String(i))} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {frames.map((frame, index) => (
+                  <SortableItem key={index} id={String(index)} frame={frame} index={index} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </>
       )}
 

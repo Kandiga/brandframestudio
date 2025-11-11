@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { BrandAssets } from './components/BrandAssets';
 import { Storyboard } from './components/Storyboard';
 import { ProjectDashboard } from './components/ProjectDashboard';
+import { arrayMove } from '@dnd-kit/sortable';
 
 function App() {
   const [storyboardData, setStoryboardData] = useState<{ script: any[]; frames: string[] } | null>(null);
@@ -12,20 +13,13 @@ function App() {
     setStoryboardData(data);
   };
 
-  const handleSceneReorder = (startIndex: number, endIndex: number) => {
+  const handleSceneReorder = (oldIndex: number, newIndex: number) => {
     if (!storyboardData) return;
 
-    const newFrames = Array.from(storyboardData.frames);
-    const [removed] = newFrames.splice(startIndex, 1);
-    newFrames.splice(endIndex, 0, removed);
-
-    const newScript = Array.from(storyboardData.script);
-    const [removedScript] = newScript.splice(Math.floor(startIndex / 2), 1);
-    newScript.splice(Math.floor(endIndex / 2), 0, removedScript);
-
     setStoryboardData({
-      script: newScript,
-      frames: newFrames,
+      ...storyboardData,
+      frames: arrayMove(storyboardData.frames, oldIndex, newIndex),
+      script: arrayMove(storyboardData.script, Math.floor(oldIndex / 2), Math.floor(newIndex / 2)),
     });
   };
 
